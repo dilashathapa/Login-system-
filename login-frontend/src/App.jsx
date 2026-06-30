@@ -1,10 +1,13 @@
+import { Routes, Route } from "react-router-dom";
+import "./index.css";
 import AuthPage from "./pages/AuthPage";
 
 function App() {
   return (
-    <>
-      <AuthPage />
-    </>
+    <Routes>
+      <Route path="/" element={<AuthPage />} />
+      
+    </Routes>
   );
 }
 
