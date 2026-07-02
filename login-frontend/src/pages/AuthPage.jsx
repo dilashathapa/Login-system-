@@ -1,8 +1,11 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom"; // Add this for navigation
 import API from "../services/authService";
 
 const AuthPage = () => {
+  const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
 
   // State for login form fields
   const [loginData, setLoginData] = useState({
@@ -17,55 +20,109 @@ const AuthPage = () => {
     confirmPassword: "",
   });
 
+  // Validation function for registration
+  const validateRegistration = () => {
+    const { email, password, confirmPassword } = registerData;
+    
+    // Check if email is valid
+    if (!email.includes("@")) {
+      alert("Please enter a valid email address (must contain @)");
+      return false;
+    }
+    
+    // Check password length
+    if (password.length < 6) {
+      alert("Password must be at least 6 characters long");
+      return false;
+    }
+    
+    // Check if passwords match
+    if (password !== confirmPassword) {
+      alert("Passwords do not match");
+      return false;
+    }
+    
+    return true;
+  };
+
   // Handle login form submission
   const handleLoginSubmit = async (e) => {  
-    e.preventDefault(); // Prevent default form submission
+    e.preventDefault();
+    setIsLoading(true);
 
     try {
-      // Send POST request to login endpoint with loginData
       const response = await API.post("/api/auth/login", loginData);
-      console.log("Login Success:", response.data); 
-      alert(response.data.message || "Login Successful"); // Show success message to the user
-
-  
+      console.log("Login Success:", response.data);
+      
+      // ✅ STEP 3: Save token and user info
+      const { token, ...userData } = response.data.data;
+      localStorage.setItem("token", token);
+      localStorage.setItem("user", JSON.stringify(userData));
+      
+      alert(response.data.message || "Login Successful");
+      
+      // ✅ Redirect based on role
+      const role = userData.role;
+      if (role === "ADMIN") {
+        navigate("/admin");
+      } else if (role === "STAFF") {
+        navigate("/staff");
+      } else if (role === "CUSTOMER") {
+        navigate("/customer");
+      } else {
+        navigate("/"); // Fallback
+      }
+      
     } catch (error) {
-      console.log(error); 
+      console.log(error);
       alert(
         error.response?.data?.message ||
           "Login Failed. Please try again."
       );
+    } finally {
+      setIsLoading(false);
     }
   };
 
   // Handle registration form submission
   const handleRegisterSubmit = async (e) => {
     e.preventDefault();
+    
+    // ✅ Validate form before submission
+    if (!validateRegistration()) {
+      return;
+    }
+    
+    setIsLoading(true);
 
     try {
-      // Send POST request to register endpoint with registerData
-      const response = await API.post(
-        "/api/auth/register",
-        registerData
-      );
+      const response = await API.post("/api/auth/register", {
+        email: registerData.email,
+        password: registerData.password,
+        confirmPassword: registerData.confirmPassword,
+      });
 
       console.log("Register Success:", response.data);
-
-      // Show success message
-      alert(response.data.message);
+      alert(response.data.message || "Registration successful! You can now login.");
+      
+      // ✅ Switch to login form
       setIsLogin(true);
-
-      // Clear registration form fields
+      
+      // ✅ Clear registration form fields
       setRegisterData({
         email: "",
         password: "",
         confirmPassword: "",
       });
+      
     } catch (error) {
       console.log(error);
       alert(
         error.response?.data?.message ||
-          "Registration Failed."
+          "Registration Failed. Please try again."
       );
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -81,12 +138,10 @@ const AuthPage = () => {
             ? "Login to continue"
             : "Register as a customer"}
         </p>
+        
         {isLogin ? (
           // Login form
-          <form
-            onSubmit={handleLoginSubmit}
-            className="space-y-5"
-          >
+          <form onSubmit={handleLoginSubmit} className="space-y-5">
             {/* Email input */}
             <div>
               <label className="block mb-2 font-medium">
@@ -104,6 +159,7 @@ const AuthPage = () => {
                   })
                 }
                 required
+                disabled={isLoading}
               />
             </div>
 
@@ -124,23 +180,26 @@ const AuthPage = () => {
                   })
                 }
                 required
+                disabled={isLoading}
               />
             </div>
 
             {/* Submit button */}
             <button
               type="submit"
-              className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition"
+              disabled={isLoading}
+              className={`w-full text-white py-3 rounded-lg font-semibold transition ${
+                isLoading 
+                  ? "bg-blue-400 cursor-not-allowed" 
+                  : "bg-blue-600 hover:bg-blue-700"
+              }`}
             >
-              Login
+              {isLoading ? "Logging in..." : "Login"}
             </button>
           </form>
         ) : (
           // Registration form
-          <form
-            onSubmit={handleRegisterSubmit}
-            className="space-y-5"
-          >
+          <form onSubmit={handleRegisterSubmit} className="space-y-5">
             {/* Email input */}
             <div>
               <label className="block mb-2 font-medium">
@@ -158,7 +217,9 @@ const AuthPage = () => {
                   })
                 }
                 required
+                disabled={isLoading}
               />
+              <p className="text-xs text-gray-500 mt-1">Must contain @</p>
             </div>
 
             {/* Password input */}
@@ -178,7 +239,9 @@ const AuthPage = () => {
                   })
                 }
                 required
+                disabled={isLoading}
               />
+              <p className="text-xs text-gray-500 mt-1">Minimum 6 characters</p>
             </div>
 
             {/* Confirm Password input */}
@@ -198,15 +261,21 @@ const AuthPage = () => {
                   })
                 }
                 required
+                disabled={isLoading}
               />
             </div>
 
             {/* Submit button */}
             <button
               type="submit"
-              className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition"
+              disabled={isLoading}
+              className={`w-full text-white py-3 rounded-lg font-semibold transition ${
+                isLoading 
+                  ? "bg-blue-400 cursor-not-allowed" 
+                  : "bg-blue-600 hover:bg-blue-700"
+              }`}
             >
-              Create Account
+              {isLoading ? "Creating Account..." : "Create Account"}
             </button>
           </form>
         )}
@@ -218,7 +287,8 @@ const AuthPage = () => {
               <button
                 type="button"
                 onClick={() => setIsLogin(false)}
-                className="text-blue-600 font-semibold"
+                className="text-blue-600 font-semibold hover:underline"
+                disabled={isLoading}
               >
                 Register
               </button>
@@ -229,7 +299,8 @@ const AuthPage = () => {
               <button
                 type="button"
                 onClick={() => setIsLogin(true)}
-                className="text-blue-600 font-semibold"
+                className="text-blue-600 font-semibold hover:underline"
+                disabled={isLoading}
               >
                 Login
               </button>
