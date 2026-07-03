@@ -3,11 +3,11 @@ import dotenv from "dotenv";
 import { connectDB } from "./config/db.js";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import authRoutes from './routes/authRoutes.js';
 
 dotenv.config(); // Load environment variables
 const PORT = process.env.PORT || 5000;// Get port from environment variables or use 5000 as default
 const app = express();// Create Express application
-const router = express.Router();
 
 //===MIDDLEWARE===
 app.use(express.json());// Parse incoming JSON requests
@@ -19,10 +19,8 @@ app.use(cors({
 }))
 app.use(cookieParser());// Parse cookies from incoming requests
 
-// Test Route
-router.get("/", (req, res) => {
-  res.send("Auth Route is working!");
-});
+//===ROUTES===
+app.use('/api/auth', authRoutes);// Authentication routes
 
 //===DATABASE CONNECTION===
 connectDB();
@@ -31,4 +29,3 @@ connectDB();
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });
-export default router;
